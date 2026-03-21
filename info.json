@@ -1,0 +1,27 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Chatterino/chatterino2/master/docs/plugin-info.schema.json",
+  "name": "yt-chat",
+  "description": "Read YouTube livestream chats, inside your Chatterino!",
+  "authors": [
+    "kararty"
+  ],
+  "homepage": "https://github.com/Remahy/Chatterino-Plugins/tree/main/yt-chat",
+  "tags": [
+    "commands",
+    "utility",
+    "youtube"
+  ],
+  "version": "0.2.0",
+  "license": "MIT",
+  "permissions": [
+    {
+      "type": "Network"
+    },
+    {
+      "type": "FilesystemRead"
+    },
+    {
+      "type": "FilesystemWrite"
+    }
+  ]
+}
