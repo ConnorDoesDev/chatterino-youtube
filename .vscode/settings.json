@@ -1,8 +1,4 @@
 {
-  "Lua.workspace.library": [
-    "./types"
-  ],
-  "Lua.diagnostics.globals": [
-    "JSON"
-  ]
+  "Lua.workspace.library": ["./types"],
+  "Lua.diagnostics.globals": ["JSON"]
 }

@@ -24,7 +24,9 @@ Read YouTube livestream chats, inside your Chatterino!
   ```
   /yt-chat https://www.youtube.com/@Username/live
   ```
+
   or
+
   ```
   /yt-chat https://www.youtube.com/channel/CHANNEL_ID/live
   ```
@@ -61,12 +63,14 @@ Read YouTube livestream chats, inside your Chatterino!
 - If the chat does not appear, ensure the YouTube stream is live and the URL is correct.
 
 ## Features
+
 - Innertube-only.
 - Add YouTube channels via `https://www.youtube.com/@Username/live` or `https://www.youtube.com/channel/.../live` to add offline YouTube channels and render their chat once stream is live.
 - Offline polling every 1 second.
 - Youtube chats can be added to multiple Chatterino channels, the polling will add YouTube chat to the relevant Chatterino channels without extra polling.
 
 ## Credits
+
 Thanks to @mm2pl and @nerixyz, they were big help.
 
 MIT
