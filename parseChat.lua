@@ -1,7 +1,7 @@
 local json = require "libs/json"
 
 require "buildMessage"
-require "mm2plHelper"
+-- require removed: now in utils.lua
 
 ---@param action table
 local add_chat = function(data, action)

@@ -1,7 +1,7 @@
 local json = require "libs/json"
 
 require "constants"
-require "mm2plHelper"
+-- require removed: now in utils.lua
 require "utils"
 
 local STREAMS_FILE_NAME = "YT_CHAT.json"

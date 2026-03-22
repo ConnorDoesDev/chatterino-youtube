@@ -1,8 +1,5 @@
 local json = require "libs/json"
-
---To reduce a bunch of repeated code, we have this meta message that has every conceivable field for a message.
----@param message { timestamp: string }
----@return table
+local json = require "utils"
 local create_message = function(message)
   -- Required fields for all messages, for now.
   local timestamp = message.timestamp
@@ -62,9 +59,6 @@ local chat_poll_action = function()
   return nil
 end
 
----@param textRenderer {}
----@param showChannel boolean
----@return c2.Message
 local text_message = function(data, textRenderer, showChannel)
   local channelName = data.channelName
 
@@ -107,9 +101,6 @@ local emoji_reaction = function()
   return nil
 end
 
----@param data {} - initial data
----@param item {} - json
----@param showChannel boolean
 function Build_Message(data, item, showChannel)
   -- This is a emoji reaction which users can spam.
   if OptionalChain(item, "liveChatPlaceholderItemRenderer") then
