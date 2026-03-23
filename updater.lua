@@ -25,6 +25,7 @@ local json = require "libs/json"
 -- Files that will be downloaded if the remote version is newer.
 -- Paths are relative to the plugin root and must match the remote layout.
 local MANAGED_FILES = {
+  "info.json",
   "init.lua",
   "state.lua",
   "readStream.lua",
@@ -36,15 +37,14 @@ local MANAGED_FILES = {
   "systemMessages.lua",
   "constants.lua",
   "mm2plHelper.lua",
-  "parseChat.lua",
 }
 
 -- Seconds after startup before the first update check fires.
 -- Gives the rest of the plugin time to initialise.
 local CHECK_DELAY_MS = 5000
 
--- Seconds between periodic re-checks (1 hours).
-local RECHECK_INTERVAL_MS = 1 * 60 * 60 * 1000
+-- Seconds between periodic re-checks (6 hours).
+local RECHECK_INTERVAL_MS = 6 * 60 * 60 * 1000
 
 -- ---------------------------------------------------------------------------
 -- Semver comparison
@@ -217,28 +217,6 @@ local function download_all_files(base_url, remote_version, files, index, errors
 end
 
 -- ---------------------------------------------------------------------------
--- Persist the new version string back into the local info.json so the next
--- startup doesn't try to re-download unchanged files.
--- ---------------------------------------------------------------------------
-local function bump_local_version(new_version)
-  local f, _ = io.open("info.json", "r")
-  if not f then return end
-
-  local raw = f:read("a")
-  f:close()
-
-  local ok, info = pcall(json.decode, raw)
-  if not ok or type(info) ~= "table" then return end
-
-  info.version = new_version
-
-  local out_ok, out = pcall(json.encode, info)
-  if not out_ok then return end
-
-  write_file("info.json", out)
-end
-
--- ---------------------------------------------------------------------------
 -- Fetch the remote info.json and kick off a download if newer.
 -- ---------------------------------------------------------------------------
 local function check_for_update(local_info)
@@ -270,12 +248,7 @@ local function check_for_update(local_info)
         remote_info.version,
         MANAGED_FILES,
         1,
-        {},
-        function()
-          -- After all files are written, bump the stored version so the
-          -- next check doesn't trigger a redundant re-download.
-          bump_local_version(remote_info.version)
-        end
+        {}
       )
     elseif cmp == 0 then
       print("[updater] Plugin is up to date (" .. local_info.version .. ")")
