@@ -1,12 +1,12 @@
 {
   "$schema": "https://raw.githubusercontent.com/Chatterino/chatterino2/master/docs/plugin-info.schema.json",
   "name": "youtube",
-  "description": "youmtumbe,,..,.inside,..,chaterino.,.,ehehe,////// (shows youtube chat inside chatterino)",
+  "description": "plugin for rakattack to show youtube chat messages in chatterino",
   "authors": ["c0nnorgg"],
   "homepage": "https://connor.is-a.dev",
   "update_url": "https://raw.githubusercontent.com/ConnorDoesDev/chatterino-youtube/main",
   "tags": ["youtube"],
-  "version": "1.0.1",
+  "version": "1.0.2",
   "license": "MIT",
   "permissions": [
     {
