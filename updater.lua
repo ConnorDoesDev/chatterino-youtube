@@ -24,6 +24,7 @@ local json = require "libs/json"
 
 -- Files that will be downloaded if the remote version is newer.
 -- Paths are relative to the plugin root and must match the remote layout.
+-- (Now includes updater.lua itself and libs/json.lua for completeness)
 local MANAGED_FILES = {
   "info.json",
   "init.lua",
@@ -37,6 +38,8 @@ local MANAGED_FILES = {
   "systemMessages.lua",
   "constants.lua",
   "mm2plHelper.lua",
+  "updater.lua",      -- self-update capability
+  "libs/json.lua",    -- JSON library
 }
 
 -- Seconds after startup before the first update check fires.
@@ -179,9 +182,9 @@ local function download_all_files(base_url, remote_version, files, index, errors
       local notice = "[youtube] Plugin updated to v" .. remote_version ..
                      ". Please reload the plugin (Settings → Plugins → toggle off/on) " ..
                      "or restart Chatterino to apply the update."
-      -- We don't have a global "all channels" API, so log prominently.
+      -- We don't have a global "all channels" API, so log prominently and hope the user sees it in the log if they miss the system messages in chat
       c2.log(c2.LogLevel.Warning, notice)
-      -- Also post into any active stream splits so it's visible in chat.
+      -- Also post into any active stream splits so it's visible in chat
       for videoId, splits in pairs(ACTIVE_STREAMS or {}) do
         for _, split in ipairs(splits) do
           local ch = c2.Channel.by_name(split)
@@ -208,16 +211,13 @@ local function download_all_files(base_url, remote_version, files, index, errors
       table.insert(errors, err)
       print("[updater] Warning: " .. err)
     end
-    -- Schedule the next download via c2.later to avoid deep recursion on
-    -- large file lists. 0ms still yields back to the event loop.
+    -- large file lists. 0ms still yields back to the event loop
     c2.later(function()
       download_all_files(base_url, remote_version, files, index + 1, errors)
     end, 0)
   end)
 end
 
--- ---------------------------------------------------------------------------
--- Fetch the remote info.json and kick off a download if newer.
 -- ---------------------------------------------------------------------------
 local function check_for_update(local_info)
   local remote_url = local_info.update_url .. "/info.json"
@@ -266,23 +266,17 @@ local function check_for_update(local_info)
 end
 
 -- ---------------------------------------------------------------------------
--- Recurring check loop.
--- ---------------------------------------------------------------------------
-local function schedule_checks(local_info)
-  check_for_update(local_info)
-  c2.later(function()
-    schedule_checks(local_info)
-  end, RECHECK_INTERVAL_MS)
+local function schedule_checks()
+  local local_info = read_local_info()
+  if local_info then
+    check_for_update(local_info)
+  end
+  c2.later(schedule_checks, RECHECK_INTERVAL_MS)
 end
 
 -- ---------------------------------------------------------------------------
--- Public entry point — call once from init.lua.
+-- Public entry point
 -- ---------------------------------------------------------------------------
 function Start_Auto_Updater()
-  c2.later(function()
-    local local_info = read_local_info()
-    if local_info then
-      schedule_checks(local_info)
-    end
-  end, CHECK_DELAY_MS)
+  c2.later(schedule_checks, CHECK_DELAY_MS)
 end

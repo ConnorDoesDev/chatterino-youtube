@@ -2,8 +2,8 @@ require "utils"
 require "systemMessages"
 require "addStream"
 require "readStream"
-require "updater"
-Start_Auto_Updater()
+-- require "updater"
+-- Start_Auto_Updater()
 
 ---@param ctx CommandContext
 local cmd_youtube = function(ctx)
