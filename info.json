@@ -6,7 +6,7 @@
   "homepage": "https://connor.is-a.dev",
   "update_url": "https://raw.githubusercontent.com/ConnorDoesDev/chatterino-youtube/refs/heads/main",
   "tags": ["youtube"],
-  "version": "1.0.4",
+  "version": "1.0.5",
   "license": "MIT",
   "permissions": [
     {
