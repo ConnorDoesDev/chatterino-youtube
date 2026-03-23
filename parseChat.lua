@@ -75,14 +75,52 @@ end
 
 ---@param data { channelName:string, channelId:string, videoId:string, apiKey:string, clientVersion:string, continuation:string }
 ---@param result c2.HTTPResponse
-local parse_live_chat_response = function(data, result)
+
+-- Retry config
+local MAX_RETRIES = 5
+local BASE_BACKOFF = 1000 -- ms
+
+-- Helper to send system message to all splits for a videoId
+local function notify_splits(videoId, msg)
+  local splits = Get_Active_Stream_Splits(videoId) or {}
+  for _, split in ipairs(splits) do
+    local channel = c2.Channel.by_name(split)
+    if channel then
+      channel:add_system_message("[youtube] " .. msg)
+    end
+  end
+end
+
+local function parse_live_chat_response(data, result)
   local videoId = data.videoId
-
   local status = result:status()
+  local retryCount = data.retryCount or 0
 
-  if status >= 300 then
+  if status >= 500 or status == 429 then
+    -- Retry on server errors or rate limit
+    if retryCount < MAX_RETRIES then
+      local backoff = BASE_BACKOFF * (2 ^ retryCount)
+      notify_splits(videoId, "Temporary error (status " .. status .. "). Retrying in " .. math.floor(backoff/1000) .. "s...")
+      c2.later(function()
+        Read_YouTube_Chat({
+          continuation = data.continuation,
+          videoId = data.videoId,
+          apiKey = data.apiKey,
+          clientVersion = data.clientVersion,
+          channelId = data.channelId,
+          channelName = data.channelName,
+          retryCount = retryCount + 1
+        })
+      end, backoff)
+      return
+    else
+      notify_splits(videoId, "Polling stopped after repeated errors (status " .. status .. ").")
+      Remove_From_Active_Streams(videoId)
+      return
+    end
+  elseif status >= 300 then
+    notify_splits(videoId, "Polling stopped due to HTTP error (status " .. status .. ").")
     Remove_From_Active_Streams(videoId)
-    print("Status: '" .. status .. "'. End polling of", videoId)
     return
   end
 
@@ -90,15 +128,31 @@ local parse_live_chat_response = function(data, result)
   local youtubeData = json.decode(stringJson)
 
   if type(youtubeData) ~= "table" then
-    Remove_From_Active_Streams(videoId)
-    print("Data from YouTube might not be JSON. End polling of", videoId, "String:", stringJson)
-    return
+    if retryCount < MAX_RETRIES then
+      local backoff = BASE_BACKOFF * (2 ^ retryCount)
+      notify_splits(videoId, "Invalid data from YouTube. Retrying in " .. math.floor(backoff/1000) .. "s...")
+      c2.later(function()
+        Read_YouTube_Chat({
+          continuation = data.continuation,
+          videoId = data.videoId,
+          apiKey = data.apiKey,
+          clientVersion = data.clientVersion,
+          channelId = data.channelId,
+          channelName = data.channelName,
+          retryCount = retryCount + 1
+        })
+      end, backoff)
+      return
+    else
+      notify_splits(videoId, "Polling stopped: YouTube returned invalid data repeatedly.")
+      Remove_From_Active_Streams(videoId)
+      return
+    end
   end
 
   add_chats(data, youtubeData)
 
   local splits = Get_Active_Stream_Splits(videoId)
-
   for _, split in ipairs(splits) do
     local channel = c2.Channel.by_name(split)
     if channel == nil then
@@ -107,42 +161,58 @@ local parse_live_chat_response = function(data, result)
   end
 
   splits = Get_Active_Stream_Splits(videoId)
-
   if #splits == 0 then
+    notify_splits(videoId, "Polling stopped: No splits left using this chat.")
     Remove_From_Active_Streams(videoId)
-    print("Lack of splits. End polling of", videoId)
-    -- ends the polling
     return
   end
 
   local newContinuation = get_next_continuation(youtubeData)
-
   if newContinuation == nil then
-    Remove_From_Active_Streams(videoId)
-    print("Lack of newContinuation. End polling of", videoId)
-    return
+    if retryCount < MAX_RETRIES then
+      local backoff = BASE_BACKOFF * (2 ^ retryCount)
+      notify_splits(videoId, "No continuation token. Retrying in " .. math.floor(backoff/1000) .. "s...")
+      c2.later(function()
+        Read_YouTube_Chat({
+          continuation = data.continuation,
+          videoId = data.videoId,
+          apiKey = data.apiKey,
+          clientVersion = data.clientVersion,
+          channelId = data.channelId,
+          channelName = data.channelName,
+          retryCount = retryCount + 1
+        })
+      end, backoff)
+      return
+    else
+      notify_splits(videoId, "Polling stopped: No continuation token after multiple attempts.")
+      Remove_From_Active_Streams(videoId)
+      return
+    end
   end
 
+  -- Success: reset retryCount
   c2.later(function()
-    Read_YouTube_Chat(
-      {
-        continuation = newContinuation,
-        videoId = data.videoId,
-        apiKey = data.apiKey,
-        clientVersion = data.clientVersion,
-        channelId = data.channelId,
-        channelName = data.channelName
-      }
-    )
+    Read_YouTube_Chat({
+      continuation = newContinuation,
+      videoId = data.videoId,
+      apiKey = data.apiKey,
+      clientVersion = data.clientVersion,
+      channelId = data.channelId,
+      channelName = data.channelName,
+      retryCount = 0
+    })
   end, 600)
 end
 
 ---@param data { channelName:string, channelId:string, videoId:string, apiKey:string, clientVersion:string, continuation:string }
+
 function Read_YouTube_Chat(data)
-  local videoId = data.channelId
+  local videoId = data.videoId
   local apiKey = data.apiKey
   local clientVersion = data.clientVersion
   local continuation = data.continuation
+  local retryCount = data.retryCount or 0
 
   local request = c2.HTTPRequest.create(c2.HTTPMethod.Post,
     "https://www.youtube.com/youtubei/v1/live_chat/get_live_chat?key=" .. apiKey)
@@ -150,23 +220,41 @@ function Read_YouTube_Chat(data)
   Mutate_Request_Default_Headers(request)
   request:set_header("Content-Type", "application/json")
 
-  request:set_payload([[
+  request:set_payload([[ 
     {
       "context": {
         "client": {
-          "clientVersion": "]] .. clientVersion .. [[",
+          "clientVersion": "]]' .. clientVersion .. [[",
           "clientName": "WEB"
         }
       },
-      "continuation": "]] .. continuation .. [["
+      "continuation": "]]' .. continuation .. [["
     }
   ]])
 
-  request:on_success(function(result) parse_live_chat_response(data, result) end)
+  request:on_success(function(result)
+    parse_live_chat_response(data, result)
+  end)
 
   request:on_error(function(result)
-    print("Something went wrong reading chat from videoId " ..
-      videoId .. " :" .. result:error())
+    if retryCount < MAX_RETRIES then
+      local backoff = BASE_BACKOFF * (2 ^ retryCount)
+      notify_splits(videoId, "Network error: " .. result:error() .. ". Retrying in " .. math.floor(backoff/1000) .. "s...")
+      c2.later(function()
+        Read_YouTube_Chat({
+          continuation = continuation,
+          videoId = videoId,
+          apiKey = apiKey,
+          clientVersion = clientVersion,
+          channelId = data.channelId,
+          channelName = data.channelName,
+          retryCount = retryCount + 1
+        })
+      end, backoff)
+    else
+      notify_splits(videoId, "Polling stopped: Network error after multiple attempts (" .. result:error() .. ").")
+      Remove_From_Active_Streams(videoId)
+    end
   end)
 
   request:execute()

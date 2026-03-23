@@ -95,7 +95,7 @@ local text_message = function(data, textRenderer, showChannel)
   })
 
   local message = c2.Message.new({
-    id = "yt-chat-" .. id,
+    id = "youtube-" .. id,
     message_text = text,
     elements = elements
   })

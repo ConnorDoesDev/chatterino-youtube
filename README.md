@@ -1,12 +1,12 @@
-# YT-CHAT
+# youtube
 
 Read YouTube livestream chats, inside your Chatterino!
 
 ## Setup Instructions
 
 1. **Install the Plugin**
-   - Place the `yt-chat` folder into your Chatterino `Plugins` directory.
-   - Ensure `init.lua` and `info.json` are present in the `yt-chat` folder.
+   - Place the `youtube` folder into your Chatterino `Plugins` directory.
+   - Ensure `init.lua` and `info.json` are present in the `youtube` folder.
    - Restart Chatterino or enable the plugin from the Plugins menu.
 
 2. **Grant Permissions**
@@ -22,13 +22,13 @@ Read YouTube livestream chats, inside your Chatterino!
 - In any Chatterino channel, type:
 
   ```
-  /yt-chat https://www.youtube.com/@Username/live
+  /youtube https://www.youtube.com/@Username/live
   ```
 
   or
 
   ```
-  /yt-chat https://www.youtube.com/channel/CHANNEL_ID/live
+  /youtube https://www.youtube.com/channel/CHANNEL_ID/live
   ```
 
 - **Note:** The URL must start with `https://www.youtube.com/`.
@@ -39,18 +39,18 @@ Read YouTube livestream chats, inside your Chatterino!
 
 - To add the chat for a specific YouTube channel:
   ```
-  /yt-chat https://www.youtube.com/@LinusTechTips/live
+  /youtube https://www.youtube.com/@LinusTechTips/live
   ```
 - To add by channel ID:
   ```
-  /yt-chat https://www.youtube.com/channel/UCXuqSBlHAE6Xw-yeJA0Tunw/live
+  /youtube https://www.youtube.com/channel/UCXuqSBlHAE6Xw-yeJA0Tunw/live
   ```
 
 ### Removing a YouTube Chat
 
 - To remove a YouTube chat from the current split/channel, type:
   ```
-  /yt-chat-stop
+  /youtube-stop
   ```
 - This will stop displaying the YouTube chat in that split. If no YouTube chat is active, you will see a message.
 - To remove a YouTube chat, simply close the Chatterino split/channel where it was added.
@@ -58,8 +58,8 @@ Read YouTube livestream chats, inside your Chatterino!
 
 ## Troubleshooting
 
-- If you see a message like `[yt-chat] No URL provided!`, make sure you include a valid YouTube URL after the command.
-- If you see `[yt-chat] Not valid YouTube URL: ...`, check that your URL starts with `https://www.youtube.com/`.
+- If you see a message like `[youtube] No URL provided!`, make sure you include a valid YouTube URL after the command.
+- If you see `[youtube] Not valid YouTube URL: ...`, check that your URL starts with `https://www.youtube.com/`.
 - If the chat does not appear, ensure the YouTube stream is live and the URL is correct.
 
 ## Features

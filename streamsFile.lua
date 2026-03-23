@@ -4,7 +4,7 @@ require "constants"
 require "mm2plHelper"
 require "utils"
 
-local STREAMS_FILE_NAME = "YT_CHAT.json"
+local STREAMS_FILE_NAME = "youtube.json"
 local STREAMS_FILE_DEFAULT_CONTENT = [[{
   "]] .. STREAMS_SETTINGS_PROPERTY_NAME .. [[": {},
   "]] .. STREAMS_CHANNELS_PROPERTY_NAME .. [[": {}
