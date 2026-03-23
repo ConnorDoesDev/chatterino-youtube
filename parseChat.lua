@@ -220,15 +220,15 @@ function Read_YouTube_Chat(data)
   Mutate_Request_Default_Headers(request)
   request:set_header("Content-Type", "application/json")
 
-  request:set_payload([[ 
+  request:set_payload([[
     {
       "context": {
         "client": {
-          "clientVersion": "]]' .. clientVersion .. [[",
+          "clientVersion": "]] .. clientVersion .. [[",
           "clientName": "WEB"
         }
       },
-      "continuation": "]]' .. continuation .. [["
+      "continuation": "]] .. continuation .. [["
     }
   ]])
 
