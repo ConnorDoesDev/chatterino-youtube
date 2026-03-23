@@ -9,6 +9,14 @@ local add_chat = function(data, action)
 
   local splits = Get_Active_Stream_Splits(videoId)
 
+  -- BUG 4 FIX: Guard against nil/empty splits table. If Remove_From_Active_Streams
+  -- was called by another concurrent polling chain between the HTTP response
+  -- arriving and this callback executing, splits will be nil and ipairs(nil)
+  -- throws a Lua error, crashing the entire polling chain.
+  if not splits or #splits == 0 then
+    return
+  end
+
   local item = OptionalChain(action, "addChatItemAction", "item")
 
   local showChannel = #splits > 0
@@ -28,7 +36,6 @@ local add_chat = function(data, action)
   for _, split in ipairs(splits) do
     local channel = c2.Channel.by_name(split)
     if channel then
-      -- channel:add_system_message(text)
       channel:add_message(message)
     end
   end
@@ -73,9 +80,6 @@ local get_next_continuation = function(youtubeData)
   return continuation
 end
 
----@param data { channelName:string, channelId:string, videoId:string, apiKey:string, clientVersion:string, continuation:string }
----@param result c2.HTTPResponse
-
 -- Retry config
 local MAX_RETRIES = 5
 local BASE_BACKOFF = 1000 -- ms
@@ -91,13 +95,14 @@ local function notify_splits(videoId, msg)
   end
 end
 
+---@param data { channelName:string, channelId:string, videoId:string, apiKey:string, clientVersion:string, continuation:string }
+---@param result c2.HTTPResponse
 local function parse_live_chat_response(data, result)
   local videoId = data.videoId
   local status = result:status()
   local retryCount = data.retryCount or 0
 
   if status >= 500 or status == 429 then
-    -- Retry on server errors or rate limit
     if retryCount < MAX_RETRIES then
       local backoff = BASE_BACKOFF * (2 ^ retryCount)
       notify_splits(videoId, "Temporary error (status " .. status .. "). Retrying in " .. math.floor(backoff/1000) .. "s...")
@@ -152,16 +157,27 @@ local function parse_live_chat_response(data, result)
 
   add_chats(data, youtubeData)
 
+  -- BUG 3 FIX: Collect stale splits into a separate table before removing
+  -- any of them. Calling Remove_Split_From_Active_Streams inside an ipairs
+  -- loop over the same table shifts indices mid-iteration, causing the entry
+  -- immediately after a removed one to be silently skipped. In the worst case
+  -- (two consecutive dead splits) the second stale entry survives indefinitely,
+  -- keeping the stream "active" even after all real splits are gone.
   local splits = Get_Active_Stream_Splits(videoId)
-  for _, split in ipairs(splits) do
-    local channel = c2.Channel.by_name(split)
-    if channel == nil then
+  if splits then
+    local stale = {}
+    for _, split in ipairs(splits) do
+      if c2.Channel.by_name(split) == nil then
+        table.insert(stale, split)
+      end
+    end
+    for _, split in ipairs(stale) do
       Remove_Split_From_Active_Streams(videoId, split)
     end
   end
 
   splits = Get_Active_Stream_Splits(videoId)
-  if #splits == 0 then
+  if not splits or #splits == 0 then
     notify_splits(videoId, "Polling stopped: No splits left using this chat.")
     Remove_From_Active_Streams(videoId)
     return
@@ -206,7 +222,6 @@ local function parse_live_chat_response(data, result)
 end
 
 ---@param data { channelName:string, channelId:string, videoId:string, apiKey:string, clientVersion:string, continuation:string }
-
 function Read_YouTube_Chat(data)
   local videoId = data.videoId
   local apiKey = data.apiKey

@@ -65,6 +65,13 @@ local is_live_request = function(channelId, splits)
 end
 
 function Read_Stream_Data()
+  -- BUG 2 FIX: Always reschedule the next tick unconditionally before doing
+  -- any work. The previous code returned early when IO_LOCK was true without
+  -- calling c2.later, which permanently killed the polling loop — there was
+  -- no other code path that would restart it. Scheduling up front means a
+  -- locked tick is silently skipped but the loop always continues.
+  c2.later(Read_Stream_Data, 1000)
+
   if IO_LOCK then
     return
   end
@@ -80,6 +87,4 @@ function Read_Stream_Data()
       print("No splits available for", channelId)
     end
   end
-
-  c2.later(Read_Stream_Data, 1000)
 end
